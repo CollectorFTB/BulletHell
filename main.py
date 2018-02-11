@@ -1,6 +1,7 @@
 import time
 import os
 from threading import Thread
+from pynput.keyboard import Key, Listener
 
 
 def cls():
@@ -32,41 +33,63 @@ def create_board(height, width):
 class Game:
     def __init__(self):
         # constants
-        self.data = {'fps': 10, 'width': 40, 'height': 29, 'track_length': 60}
+        self.data = {'fps': 5, 'width': 50, 'height': 29}
+
+        # region keyboard listener
+        def on_press(key):
+            print(key)
+
+        def on_release(key):
+            if key == Key.esc:
+                self.running = False
+                return False
+
+        self.keyboard = Listener(on_press=on_press, on_release=on_release)
+        self.keyboard.start()
+        # endregion
 
         # create the board
-        self.board = create_board(self.data['track_length'], self.data['width'])
-        # some noticeable values
-        self.board[0][5] = 1
-        self.board[self.data['height']-1][6] = 9
-        self.board[3][5] = 7
-        self.board[self.data['height'] + 10][6] = 2
+        self.board = create_board(self.data['height'], self.data['width'])
+
+        # region create the character
+        class Character:
+            def __init__(self, i, j, value):
+                self.i = i
+                self.j = j
+                self.value = value
+
+        self.char = Character(25, 25, '+')
+        self.move_character()
+        # endregion
 
         # thread to run the mainloop
         self.t = Thread(target=self.mainloop)
+        self.running = False
 
     def run(self):
+        self.running = True
         self.t.start()
-        input("Press enter to close...")
+        self.t.join()
+
+    def move_character(self):
+        self.board[self.char.i][self.char.j] = self.char.value
 
     def mainloop(self):
         t1 = time.time()
         t2 = t1
         interval = 1/self.data['fps']
-        start_row = 0
         while True:
+            if not self.running:
+                return
             while t2 - t1 <= interval:
                 t2 = time.time()
             else:
                 t1 = t2
-                self.render(start_row)
-                start_row += 1
-                if start_row > self.data['track_length']:
-                    return
+                self.render()
 
-    def render(self, start_row):
+    def render(self):
         cls()
-        print_board(self.board[start_row:start_row+self.data['height']])
+        print_board(self.board)
 
 if __name__ == "__main__":
     main()
